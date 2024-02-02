@@ -1,8 +1,8 @@
 """Contains Tweety Bot class for IRC"""
 
+from irc import IRC, Message
+
 from .helpers import format_ws
-from .irc import IRC
-from .message import Message
 
 
 class TweetyBot:
@@ -13,6 +13,7 @@ class TweetyBot:
         self.commands = [self.hello, self.die]
         self.current_message: Message | None = None
         self.commands_run: list[str] = []
+        self.last_song_id: str | None = None
 
     def start(self):
         """Start the bot"""
@@ -65,6 +66,6 @@ class TweetyBot:
         run_ = format_ws(self.current_message) in {"die"}
 
         if run_:
-            self.irc.send(Message(content="Goodbye!"))
+            self.irc.send(Message(content="Aww okay, goodbye... 😢"))
             self.irc.disconnect()
             self.commands_run.append("die")

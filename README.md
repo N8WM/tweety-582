@@ -19,11 +19,11 @@ Tweety-Bot] Come on, John... It’s Beiber! You know it!
 
 ### User Initiated
 1. Users can inquire details concerning the most recently expressed song.
-    - Artist
-    - Name of Song
-    - Year
-    - Genre (tag)
-    - ...
+- Artist
+- Name of Song
+- Year
+- Genre (tag)
+- ...
 
 Example:
 John] Rick: Are Bob and Sue an item?

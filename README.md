@@ -7,7 +7,8 @@ IRC music-oriented chatbot for CSC-582
 1. Respond to users' indirect messages with verse of song within threshold.
 2. If no direct response, ask rhetorical question?
 
-Example:
+Example:   
+
 John] Rick: Are Bob and Sue an item?
 
 Tweety-Bot] Are we an item? Girl, quit playin' / "We're just friends," what are you sayin'?
@@ -25,7 +26,8 @@ Tweety-Bot] Come on, John... It’s Beiber! You know it!
 - Genre (tag)
 - ...
 
-Example:
+Example:   
+
 John] Rick: Are Bob and Sue an item?
 
 Tweety-Bot] Are we an item? Girl, quit playin' / "We're just friends," what are you sayin'?

@@ -16,6 +16,7 @@ class Message:
             raw_message is not None or content is not None
         ), "Message Error: either raw_message or content must be specified"
         self.error = None
+        self.sender = None
         if raw_message:
             self.raw_message = raw_message
             self.parse()
@@ -30,24 +31,26 @@ class Message:
         v_command = "PRIVMSG" in self.raw_message
         v_channel = CHANNEL in self.raw_message
         v_target = self.target == NICKNAME
-        return v_command and v_channel and v_target
+        v_sender = self.sender is not None
+        return v_command and v_channel and v_target and v_sender
 
     def parse(self) -> None:
         """Parse the raw message (internal use only)"""
-        tstart = self.raw_message.find(":", 1) + 1
-        text = self.raw_message[tstart:]
-        cstart = text.find(":") + 1
-        if re.match(r"^[^\s:]+:.*$", text):
-            self.target = text[: cstart - 1]
-        else:
-            cstart = 0
-            self.target = None
-        self.content = text[cstart:].lstrip()
-        if not "PRIVMSG" in self.raw_message and "ERROR" in self.raw_message:
-            self.error = "something broke"
-            error_sp = self.raw_message.split(":")
-            if len(error_sp) > 2:
-                self.error = error_sp[1]
+        error_match = re.match(r"^ERROR(?:\s*:(?P<content>.*))?$", self.raw_message)
+        if error_match is not None:
+            self.error = error_match.group("content")
+            self.error = self.error if self.error else "something broke"
+            return
+
+        sender_match = re.match(r"^:([A-Za-z0-9-_@&$()/]+)!.*$", self.raw_message)
+        main_match = re.search(
+            rf".*PRIVMSG {CHANNEL} :(?:(?P<target>[^\s]+):\s*)?(?P<content>.*)\s*$",
+            self.raw_message
+        )
+
+        self.sender = sender_match.group(1) if sender_match else None
+        self.target = main_match.group("target") if main_match else None
+        self.content = main_match.group("content") if main_match else None
 
     def assemble(self) -> str:
         """Assemble the message"""

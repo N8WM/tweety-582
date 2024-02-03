@@ -55,9 +55,10 @@ class IRC:
     def get_response(self) -> list[Message]:
         """Get the response from the server"""
         time.sleep(1)
-        resp = self.irc.recv(2040).decode("UTF-8").strip()
-        raw_messages = resp.strip().split("\n")
-        messages = [Message(m) for m in raw_messages if m]
+        resp = self.irc.recv(2040).decode("UTF-8").lstrip()
+        raw_messages = re.findall(r"(:.*?)(?=:\n|$)", resp, re.DOTALL | re.MULTILINE)
+        split_messages = [m.replace("\n", "") for m in raw_messages]
+        messages = [Message(m) for m in split_messages if m]
 
         if resp.find("PING") != -1:
             self.command("PONG " + resp.split()[1] + "\r")
@@ -88,5 +89,5 @@ class IRC:
                     print(f"* < {message.raw_message}")
                     yield message
                 else:
-                    if not re.match(r"^:[a-z]*\.libera\.chat.*$", message.raw_message):
-                        print(f"  < {message.raw_message}")
+                    # if not re.match(r"^:[a-z]*\.libera\.chat.*$", message.raw_message):
+                    print(f"  < {message.raw_message}")

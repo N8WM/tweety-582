@@ -1,8 +1,10 @@
 """Contains Tweety Bot class for IRC"""
 
+import random
+
 from irc import IRC, Message
 
-from .helpers import format_ws
+from .helpers import simplify
 
 
 class TweetyBot:
@@ -30,7 +32,7 @@ class TweetyBot:
                     self.irc.send(Message(content=message.content))
 
         except KeyboardInterrupt:
-            self.irc.send(Message(content="I have been terminated"))
+            self.irc.send(Message(content="I have been terminated X.X"))
             self.irc.disconnect()
 
     ## ===  Commands === ##
@@ -42,8 +44,9 @@ class TweetyBot:
 
         assert self.current_message is not None
 
-        run_ = format_ws(self.current_message) in {
+        run_ = simplify(self.current_message) in {
             "hi",
+            "hey",
             "hello",
             "howdy",
             "greetings",
@@ -53,7 +56,8 @@ class TweetyBot:
         }
 
         if run_:
-            self.irc.send(Message(content="Hey!"))
+            responses = ["Hey!", "Heya!", "Heyyyy :3", "^.^", "Yooo"]
+            self.irc.send(Message(content=random.choice(responses)))
             self.commands_run.append("hello")
 
     def die(self):
@@ -63,9 +67,9 @@ class TweetyBot:
 
         assert self.current_message is not None
 
-        run_ = format_ws(self.current_message) in {"die"}
+        run_ = simplify(self.current_message) in {"die"}
 
         if run_:
-            self.irc.send(Message(content="Aww okay, goodbye... 😢"))
+            self.irc.send(Message(content="Aww okay, goodbye... X.X"))
             self.irc.disconnect()
             self.commands_run.append("die")

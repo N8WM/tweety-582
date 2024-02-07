@@ -1,20 +1,62 @@
 """Command handler for the bot"""
 
+from enum import Enum
 from typing import Callable
 
 import torch
 
+from irc import Message
+
 from .embeddings import embed, most_similar
+
+
+class SongInfo(Enum):
+    """Rhetorical question enum"""
+
+    SONG_TITLE = "song name"
+    SONG_ARTIST = "song artist"
+    SONG_YEAR = "song year"
+    SONG_GENRE = "song genre"
+
+
+class Context:
+    """Class for a command context"""
+
+    def __init__(self):
+        self.latest_message: Message | None = None
+        self.cur_rhet: SongInfo | None = None
+        self.cur_rhet_target: str | None = None
+
+    def update_latest_message(self, msg: Message) -> None:
+        """Set the latest message"""
+        self.latest_message = msg
+
+    def update_rhetorical(self, rhet: SongInfo, target: str | None) -> None:
+        """Set the current rhetorical question"""
+        self.cur_rhet = rhet
+        self.cur_rhet_target = target
+
+    def clear_rhetorical(self) -> None:
+        """Clear the current rhetorical question"""
+        self.cur_rhet = None
+        self.cur_rhet_target = None
+
+    def has_rhetorical(self) -> bool:
+        """Check if a rhetorical question is active"""
+        return self.cur_rhet is not None
 
 
 class Command:
     """Class for a singular command"""
 
-    def __init__(self, phrases: list[str], callback: Callable):
+    def __init__(self, phrases: list[str], callback: Callable, run_once=False):
         self.phrases = phrases
         self.callback = callback
+        self.run_once = run_once
+        self.context: Context | None = None
         self.phrase_embedings = torch.stack([embed(phrase) for phrase in phrases])
         self.lmp_idx: int | None = None
+        self.already_ran = False
 
     def run(self, *args, **kwargs):
         """Run the command"""
@@ -32,6 +74,16 @@ class CommandHandler:
 
     def __init__(self):
         self.commands: list[Command] = []
+        self.context = Context()
+
+    def reset(self) -> None:
+        """Reset the command handler"""
+        self.commands = [c for c in self.commands if not c.run_once]
+        for command in self.commands:
+            command.lmp_idx = None
+            command.already_ran = False
+        # Say something like "never mind"?
+        self.context.clear_rhetorical()
 
     def closest_command(
         self, phrase: str, threshold: float = 0, min_diff: float = 0
@@ -86,33 +138,52 @@ class CommandHandler:
         command.lmp_idx = phrase_idxs[max_command_idx]
         return command
 
-    def add_command(self, phrases: list[str], callback: Callable) -> Command:
+    def add_command(self, command: Command) -> None:
         """Add a command to the handler"""
-        command = Command(phrases, callback)
+        command.context = self.context
         self.commands.append(command)
-        return command
+
+    def add_rhetorical_command(
+        self,
+        command: Command,
+        question_type: SongInfo,
+        question_target: str | None = None,
+    ) -> None:
+        """Add a rhetorical command to the handler"""
+        command.context = self.context
+        self.commands.append(command)
+        self.context.update_rhetorical(question_type, question_target)
 
 
 if __name__ == "__main__":
     # Test the CommandHandler
     ch = CommandHandler()
 
-    ch.add_command(["hello", "hi", "hey"], lambda: print("Hello!"))
-    ch.add_command(["die", "kill", "end", "terminate"], lambda: print("Die!"))
+    ch.add_command(Command(["hello", "hi", "hey"], lambda: print("Hello!")))
+    ch.add_command(Command(["die", "kill", "end", "terminate"], lambda: print("Die!")))
     ch.add_command(
-        ["song name", "What song was that?", "What is that song called?"],
-        lambda: print("The song name is 'Never Gonna Give You Up'."),
+        Command(
+            ["song name", "What song was that?", "What is that song called?"],
+            lambda: print("The song name is 'Never Gonna Give You Up'."),
+        )
     )
     ch.add_command(
-        ["song artist", "who", "who sang", "Who sings that song?"],
-        lambda: print("The artist is Rick Astley."),
+        Command(
+            ["song artist", "who", "who sang", "Who sings that song?"],
+            lambda: print("The artist is Rick Astley."),
+        )
     )
     ch.add_command(
-        ["song year", "when", "song release date", "When was that song made?"],
-        lambda: print("The song was released in 1987."),
+        Command(
+            ["song year", "when", "song release date", "When was that song made?"],
+            lambda: print("The song was released in 1987."),
+        )
     )
     ch.add_command(
-        ["song genre", "What genre is that song?"], lambda: print("The song is pop.")
+        Command(
+            ["song genre", "What genre is that song?"],
+            lambda: print("The song is pop."),
+        )
     )
 
     while True:

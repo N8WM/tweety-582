@@ -24,15 +24,22 @@ class Message:
             self.target = target
             self.content = content
 
-    def is_for_bot(self) -> bool:
-        """Check if the message is for the bot"""
+    def is_priv(self) -> bool:
+        """Check if the message is a private message"""
         if self.raw_message is None:
             return False
         v_command = "PRIVMSG" in self.raw_message
         v_channel = CHANNEL in self.raw_message
-        v_target = self.target == NICKNAME
         v_sender = self.sender is not None
-        return v_command and v_channel and v_target and v_sender
+        return v_command and not v_channel and v_sender
+
+
+    def is_for_bot(self) -> bool:
+        """Check if the message is for the bot"""
+        if self.raw_message is None:
+            return False
+        v_target = self.target == NICKNAME
+        return self.is_priv() and v_target
 
     def parse(self) -> None:
         """Parse the raw message (internal use only)"""

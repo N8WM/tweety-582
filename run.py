@@ -1,6 +1,6 @@
 """Script to run our bot"""
 
-from bot import TweetyBot
+from bot.tweety import TweetyBot
 
 if __name__ == "__main__":
     tweety = TweetyBot()

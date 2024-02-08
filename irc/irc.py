@@ -85,9 +85,9 @@ class IRC:
             for message in self.get_response():
                 if not self.open:
                     break
-                if message.is_for_bot():
-                    print(f"* < {message.raw_message}")
+                if message.is_priv():
+                    if message.is_for_bot():
+                        print(f"* < {message.raw_message}")
+                    else:
+                        print(f"  < {message.raw_message}")
                     yield message
-                else:
-                    # if not re.match(r"^:[a-z]*\.libera\.chat.*$", message.raw_message):
-                    print(f"  < {message.raw_message}")

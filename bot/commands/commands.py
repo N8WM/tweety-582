@@ -1,22 +1,14 @@
 """Command handler for the bot"""
 
-from enum import Enum
 from typing import Callable
 
 import torch
 
 from irc import Message
+from music.music import SongInfo, Stanza
 
+from . import helpers
 from .embeddings import embed, most_similar
-
-
-class SongInfo(Enum):
-    """Rhetorical question enum"""
-
-    SONG_TITLE = "song name"
-    SONG_ARTIST = "song artist"
-    SONG_YEAR = "song year"
-    SONG_GENRE = "song genre"
 
 
 class Context:
@@ -24,6 +16,7 @@ class Context:
 
     def __init__(self):
         self.latest_message: Message | None = None
+        self.cur_stanza: Stanza | None = None
         self.cur_rhet: SongInfo | None = None
         self.cur_rhet_target: str | None = None
 
@@ -36,8 +29,9 @@ class Context:
         self.cur_rhet = rhet
         self.cur_rhet_target = target
 
-    def clear_rhetorical(self) -> None:
-        """Clear the current rhetorical question"""
+    def clear(self) -> None:
+        """Clear the context (sans message)"""
+        self.cur_stanza = None
         self.cur_rhet = None
         self.cur_rhet_target = None
 
@@ -49,10 +43,13 @@ class Context:
 class Command:
     """Class for a singular command"""
 
-    def __init__(self, phrases: list[str], callback: Callable, run_once=False):
+    def __init__(
+        self, phrases: list[str], callback: Callable, run_once=False, exact=False
+    ):
         self.phrases = phrases
         self.callback = callback
         self.run_once = run_once
+        self.exact = exact
         self.context: Context | None = None
         self.phrase_embedings = torch.stack([embed(phrase) for phrase in phrases])
         self.lmp_idx: int | None = None
@@ -83,10 +80,26 @@ class CommandHandler:
             command.lmp_idx = None
             command.already_ran = False
         # Say something like "never mind"?
-        self.context.clear_rhetorical()
+        self.context.clear()
+
+    def new_message(self, message: Message) -> None:
+        """Update the context with a new message"""
+        self.context.update_latest_message(message)
+
+    def new_stanza(self, stanza: Stanza, rhetorical: SongInfo | None = None) -> None:
+        """Reset and update the context with a new stanza"""
+        assert self.context.latest_message is not None
+
+        self.reset()
+        self.context.cur_stanza = stanza
+
+        if rhetorical:
+            self.context.update_rhetorical(
+                rhetorical, self.context.latest_message.sender
+            )
 
     def closest_command(
-        self, phrase: str, threshold: float = 0, min_diff: float = 0
+        self, threshold: float = 0, min_diff: float = 0
     ) -> Command | None:
         """
         Return the closest command to the input phrase, with an optional minimum
@@ -100,13 +113,30 @@ class CommandHandler:
         - `Command | None`: The closest command to the phrase, or `None` if no
           command is close enough.
         """
+        assert self.context.latest_message is not None
+        phrase = self.context.latest_message.content
+        assert isinstance(phrase, str)
+
         sim_scores: list[float] = []
         phrase_idxs: list[int] = []
 
-        if len(self.commands) == 0:
+        exact_commands = [c for c in self.commands if c.exact]
+        soft_commands = [c for c in self.commands if not c.exact]
+
+        # check for exact matches
+
+        for command in exact_commands:
+            if helpers.simplify(phrase) in command.phrases:
+                idx = command.phrases.index(phrase)
+                command.lmp_idx = idx
+                return command
+
+        # no exact matches, check for soft matches
+
+        if len(soft_commands) == 0:
             return None
 
-        for command in self.commands:
+        for command in soft_commands:
             idx, score = most_similar(phrase, command.phrase_embedings)
             sim_scores.append(score)
             phrase_idxs.append(idx)
@@ -120,7 +150,7 @@ class CommandHandler:
             return None
 
         if len(sim_scores) == 1:
-            command = self.commands[max_command_idx]
+            command = soft_commands[max_command_idx]
             command.lmp_idx = phrase_idxs[max_command_idx]
             return command
 
@@ -134,7 +164,7 @@ class CommandHandler:
             print(f"!min_diff ({max_score - next_max_score} < {min_diff})")
             return None
 
-        command = self.commands[max_command_idx]
+        command = soft_commands[max_command_idx]
         command.lmp_idx = phrase_idxs[max_command_idx]
         return command
 
@@ -188,7 +218,9 @@ if __name__ == "__main__":
 
     while True:
         phr = input("Enter a phrase: ")
-        cmd = ch.closest_command(phr, 0.2, 0.1)
+        mes = Message(content=phr)
+        ch.new_message(mes)
+        cmd = ch.closest_command(0.2, 0.1)
         if cmd:
             print("Last matched phrase:", cmd.get_last_matched_phrase())
             cmd.run()

@@ -31,7 +31,7 @@ class Message:
         v_command = "PRIVMSG" in self.raw_message
         v_channel = CHANNEL in self.raw_message
         v_sender = self.sender is not None
-        return v_command and not v_channel and v_sender
+        return v_command and v_channel and v_sender
 
 
     def is_for_bot(self) -> bool:

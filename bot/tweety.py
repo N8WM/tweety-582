@@ -76,9 +76,10 @@ class TweetyBot:
 
         try:
             for message in self.irc.messages():
+                self.ch.new_message(message)
+
                 if message.is_for_bot():
-                    self.ch.new_message(message)
-                    command = self.ch.closest_command(threshold=2.0, min_diff=1.0)
+                    command = self.ch.closest_command(threshold=0.2, min_diff=0.1)
 
                     if command is not None:
                         print(
@@ -100,7 +101,7 @@ class TweetyBot:
                         )
 
         except KeyboardInterrupt:
-            self.irc.send(Message(content="I have been terminated X.X"))
+            self.irc.send(Message(content="i have been terminated X.X"))
             self.irc.disconnect()
 
     ### COMMANDS ###
@@ -112,7 +113,7 @@ class TweetyBot:
 
         return Message(
             target=latest_message.sender,
-            content=random.choice(["Hey!", "Heya!", "Heyyyy :3", "^.^", "Yooo"]),
+            content=random.choice(["hey!", "heya!", "heyyyy :3", "^.^", "yooo"]),
         )
 
     def song_title(self, command: Command) -> Message:
@@ -122,23 +123,28 @@ class TweetyBot:
         cur_stanza = self.mh.cur_stanza
 
         assert latest_message is not None
-        assert cur_stanza is not None
+
+        if cur_stanza is None:
+            return Message(
+                target=latest_message.sender,
+                content="i'm not sure what you're referring to...",
+            )
 
         response = Message(
-            target=latest_message.sender, content=f'It\'s called "{cur_stanza.title}"'
+            target=latest_message.sender, content=f'it\'s called "{cur_stanza.title}"'
         )
 
         if context.cur_rhet is SongInfo.SONG_TITLE:
             if latest_message.sender == context.cur_rhet_target:
-                response.content = "Take a guess, that's what I asked you hehe >.<"
+                response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"That's what I asked {latest_message.sender}, "
-                    + "I wanna see if they know :3"
+                    f"that's what i asked {latest_message.sender}, "
+                    + "i wanna see if they know :3"
                 )
         elif command.already_ran:
             response.content = (
-                "I already answered that haha but that's okay, "
+                "i already answered that haha but that's okay, "
                 + f'it\'s called "{cur_stanza.title}"'
             )
         else:
@@ -153,23 +159,28 @@ class TweetyBot:
         cur_stanza = self.mh.cur_stanza
 
         assert latest_message is not None
-        assert cur_stanza is not None
+
+        if cur_stanza is None:
+            return Message(
+                target=latest_message.sender,
+                content="i'm not sure what you're referring to...",
+            )
 
         response = Message(
-            target=latest_message.sender, content=f"It's by {cur_stanza.artist}"
+            target=latest_message.sender, content=f"it's by {cur_stanza.artist}"
         )
 
         if context.cur_rhet is SongInfo.SONG_ARTIST:
             if latest_message.sender == context.cur_rhet_target:
-                response.content = "Take a guess, that's what I asked you hehe >.<"
+                response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"That's what I asked {latest_message.sender}, "
-                    + "I wanna see if they know :3"
+                    f"that's what i asked {latest_message.sender}, "
+                    + "i wanna see if they know :3"
                 )
         elif command.already_ran:
             response.content = (
-                "I already answered that haha but that's okay, "
+                "i already answered that haha but that's okay, "
                 + f"it's by {cur_stanza.artist}"
             )
         else:
@@ -184,24 +195,29 @@ class TweetyBot:
         cur_stanza = self.mh.cur_stanza
 
         assert latest_message is not None
-        assert cur_stanza is not None
+
+        if cur_stanza is None:
+            return Message(
+                target=latest_message.sender,
+                content="i'm not sure what you're referring to...",
+            )
 
         response = Message(
             target=latest_message.sender,
-            content=f"It was released in {cur_stanza.year}",
+            content=f"it was released in {cur_stanza.year}",
         )
 
         if context.cur_rhet is SongInfo.SONG_YEAR:
             if latest_message.sender == context.cur_rhet_target:
-                response.content = "Take a guess, that's what I asked you hehe >.<"
+                response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"That's what I asked {latest_message.sender}, "
-                    + "I wanna see if they know :3"
+                    f"that's what i asked {latest_message.sender}, "
+                    + "i wanna see if they know :3"
                 )
         elif command.already_ran:
             response.content = (
-                "I already answered that haha but that's okay, "
+                "i already answered that haha but that's okay, "
                 + f"it was released in {cur_stanza.year}"
             )
         else:
@@ -216,23 +232,28 @@ class TweetyBot:
         cur_stanza = self.mh.cur_stanza
 
         assert latest_message is not None
-        assert cur_stanza is not None
+
+        if cur_stanza is None:
+            return Message(
+                target=latest_message.sender,
+                content="i'm not sure what you're referring to...",
+            )
 
         response = Message(
-            target=latest_message.sender, content=f"It's a {cur_stanza.genre} song"
+            target=latest_message.sender, content=f"it's a {cur_stanza.genre} song"
         )
 
         if context.cur_rhet is SongInfo.SONG_GENRE:
             if latest_message.sender == context.cur_rhet_target:
-                response.content = "Take a guess, that's what I asked you hehe >.<"
+                response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"That's what I asked {latest_message.sender}, "
-                    + "I wanna see if they know :3"
+                    f"that's what i asked {latest_message.sender}, "
+                    + "i wanna see if they know :3"
                 )
         elif command.already_ran:
             response.content = (
-                "I already answered that haha but that's okay, "
+                "i already answered that haha but that's okay, "
                 + f"it's a {cur_stanza.genre} song"
             )
         else:
@@ -245,4 +266,4 @@ class TweetyBot:
         latest_message = self.ch.context.latest_message
         assert latest_message is not None
 
-        return Message(target=latest_message.sender, content="Aww okay, goodbye... X.X")
+        return Message(target=latest_message.sender, content="aww okay, goodbye... X.X")

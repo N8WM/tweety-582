@@ -14,8 +14,11 @@ class IRC:
 
     irc = socket.socket()
 
-    def __init__(self):
+    def __init__(self, channel: str | None = None):
         """Initialize the IRC socket"""
+        if channel:
+            global CHANNEL
+            CHANNEL = channel
         print("Initializing IRC socket...")
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.open = False

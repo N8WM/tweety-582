@@ -1,6 +1,6 @@
 """Constants for IRC"""
 
-CHANNEL = "#CSC482"
+CHANNEL = "#CSC582"
 SERVER = "irc.libera.chat"
 PORT = 6667
-NICKNAME = "Tweety"
+NICKNAME = "Tweety-bot"

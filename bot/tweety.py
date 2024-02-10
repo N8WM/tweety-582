@@ -118,8 +118,8 @@ class PersonMemory:
 class TweetyBot:
     """Tweety Bot class for IRC"""
 
-    def __init__(self):
-        self.irc = IRC()
+    def __init__(self, channel: str | None = None):
+        self.irc = IRC(channel)
         self.ch = CommandHandler()
         self.mh = MusicHandler()
 

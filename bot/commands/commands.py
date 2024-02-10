@@ -55,8 +55,10 @@ class Command:
         self.lmp_idx: int | None = None
         self.already_ran = False
 
-    def run(self, *args, **kwargs):
-        """Run the command"""
+    def run(self, remove: Callable, *args, **kwargs):
+        """Run the command, remove if `run_once` is `True`"""
+        if self.run_once:
+            remove(self)
         return self.callback(*args, **kwargs)
 
     def get_last_matched_phrase(self) -> str | None:
@@ -127,7 +129,7 @@ class CommandHandler:
 
         for command in exact_commands:
             if helpers.simplify(phrase) in command.phrases:
-                idx = command.phrases.index(phrase)
+                idx = command.phrases.index(helpers.simplify(phrase))
                 command.lmp_idx = idx
                 return command
 
@@ -137,6 +139,10 @@ class CommandHandler:
             return None
 
         for command in soft_commands:
+            if helpers.simplify(phrase) in command.phrases:
+                idx = command.phrases.index(helpers.simplify(phrase))
+                command.lmp_idx = idx
+                return command
             idx, score = most_similar(phrase, command.phrase_embedings)
             sim_scores.append(score)
             phrase_idxs.append(idx)
@@ -223,6 +229,6 @@ if __name__ == "__main__":
         cmd = ch.closest_command(0.2, 0.1)
         if cmd:
             print("Last matched phrase:", cmd.get_last_matched_phrase())
-            cmd.run()
+            cmd.run(lambda: ch.commands.remove)
         else:
             print("No command found.")

@@ -44,21 +44,42 @@ class Command:
     """Class for a singular command"""
 
     def __init__(
-        self, phrases: list[str], callback: Callable, run_once=False, exact=False
+        self,
+        phrases: list[str],
+        callback: Callable,
+        answer_type: SongInfo | None = None,
+        exact=False,
     ):
         self.phrases = phrases
         self.callback = callback
-        self.run_once = run_once
         self.exact = exact
         self.context: Context | None = None
-        self.phrase_embedings = torch.stack([embed(phrase) for phrase in phrases])
+        self.phrase_embedings = self.embeddings()
         self.lmp_idx: int | None = None
         self.already_ran = False
+        self.answer_type = answer_type
 
-    def run(self, remove: Callable, *args, **kwargs):
+    def __repr__(self) -> str:
+        return f"Command({self.phrases})"
+
+    def embeddings(self) -> torch.Tensor | None:
+        """Get the phrase embeddings"""
+        if len(self.phrases) == 0:
+            return None
+        return torch.stack([embed(phrase) for phrase in self.phrases])
+
+    def update_embeddings(self) -> None:
+        """Update the phrase embeddings"""
+        self.phrase_embedings = self.embeddings()
+
+    def update_phrases(self, phrases: list[str]) -> None:
+        """Update the phrases"""
+        self.phrases = phrases
+        self.update_embeddings()
+        self.already_ran = False
+
+    def run(self, *args, **kwargs):
         """Run the command, remove if `run_once` is `True`"""
-        if self.run_once:
-            remove(self)
         return self.callback(*args, **kwargs)
 
     def get_last_matched_phrase(self) -> str | None:
@@ -77,10 +98,11 @@ class CommandHandler:
 
     def reset(self) -> None:
         """Reset the command handler"""
-        self.commands = [c for c in self.commands if not c.run_once]
         for command in self.commands:
             command.lmp_idx = None
             command.already_ran = False
+            if command.answer_type:
+                command.update_phrases([])
         # Say something like "never mind"?
         self.context.clear()
 
@@ -94,6 +116,55 @@ class CommandHandler:
 
         self.reset()
         self.context.cur_stanza = stanza
+
+        answer_phrases = {
+            SongInfo.SONG_TITLE: [
+                stanza.title,
+                f"It's called {stanza.title}",
+                # "It's called TITLE",
+                f"Is it {stanza.title}?",
+                # "Is it TITLE?",
+                f"Is the name of the song {stanza.title}?",
+                # "Is the name of the song TITLE?",
+            ],
+            SongInfo.SONG_ARTIST: [
+                stanza.artist,
+                f"It's by {stanza.artist}",
+                # "It's by ARTIST",
+                f"Is it {stanza.artist}?",
+                # "Is it ARTIST?",
+                f"Is the artist {stanza.artist}?",
+                # "Is the artist ARTIST?",
+            ],
+            SongInfo.SONG_YEAR: [
+                stanza.year,
+                f"It was released in {stanza.year}",
+                # "It was released in YEAR",
+                f"Was it released in {stanza.year}?",
+                # "Was it released in YEAR?",
+                f"Is the release year {stanza.year}?",
+                # "Is the release year YEAR?",
+                f"Is it from {stanza.year}?",
+                # "Is it from YEAR?",
+            ],
+            SongInfo.SONG_GENRE: [
+                stanza.genre,
+                f"It's {stanza.genre}",
+                # "It's GENRE",
+                f"Is it {stanza.genre}?",
+                # "Is it GENRE?",
+                f"Is the genre {stanza.genre}?",
+                # "Is the genre GENRE?",
+                f"Is it a {stanza.genre} song?",
+                # "Is it a GENRE song?",
+            ],
+        }
+
+        for command in self.commands:
+            if command.answer_type is None:
+                continue
+            phrases = answer_phrases[command.answer_type]
+            command.update_phrases(phrases)
 
         if rhetorical:
             self.context.update_rhetorical(
@@ -128,6 +199,8 @@ class CommandHandler:
         # check for exact matches
 
         for command in exact_commands:
+            if command.phrase_embedings is None:
+                continue
             if helpers.simplify(phrase) in command.phrases:
                 idx = command.phrases.index(helpers.simplify(phrase))
                 command.lmp_idx = idx
@@ -139,6 +212,8 @@ class CommandHandler:
             return None
 
         for command in soft_commands:
+            if command.phrase_embedings is None:
+                continue
             if helpers.simplify(phrase) in command.phrases:
                 idx = command.phrases.index(helpers.simplify(phrase))
                 command.lmp_idx = idx

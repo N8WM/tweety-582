@@ -1,13 +1,14 @@
 """Contains Tweety Bot class for IRC"""
 
 import random
-from bot.commands import helpers
 
+from bot.commands import helpers
 from irc.irc import IRC
 from irc.message import Message
 from music.music import MusicHandler, SongInfo
 
 from .commands.commands import Command, CommandHandler
+
 
 def oxford(items: list[str]) -> str:
     """
@@ -28,6 +29,8 @@ class PersonMemory:
     purpose = "you asked me about myself"
     song = "you were curious about the song"
     ask = "i asked you about the song"
+    correct = "you guessed correctly"
+    incorrect = "you guessed incorrectly"
     confuse = "you made me confused"
 
     def __init__(self):
@@ -35,6 +38,8 @@ class PersonMemory:
         self.purposed = False
         self.songs: set[str] = set()
         self.asked: set[str] = set()
+        self.corrects = 0
+        self.incorrects = 0
         self.confusions = 0
 
     def reflect(self) -> str:
@@ -65,6 +70,16 @@ class PersonMemory:
                 interactions.append(f"{self.confuse} at one point")
             else:
                 interactions.append(f"{self.confuse} {self.confusions} times")
+        if self.corrects > 0:
+            if self.corrects == 1:
+                interactions.append(f"{self.correct} once")
+            else:
+                interactions.append(f"{self.correct} {self.corrects} times")
+        if self.incorrects > 0:
+            if self.incorrects == 1:
+                interactions.append(f"{self.incorrect} once")
+            else:
+                interactions.append(f"{self.incorrect} {self.incorrects} times")
 
         if len(interactions) == 0:
             return "sorry i don't know you... >.<"
@@ -86,6 +101,14 @@ class PersonMemory:
     def remember_ask(self, song: str):
         """Remember that the person was asked about a song"""
         self.asked.add(song)
+
+    def remember_correct(self):
+        """Remember that the person guessed correctly"""
+        self.corrects += 1
+
+    def remember_incorrect(self):
+        """Remember that the person guessed incorrectly"""
+        self.incorrects += 1
 
     def remember_confuse(self):
         """Remember that the person confused the bot"""
@@ -119,7 +142,7 @@ class TweetyBot:
                     "What do you do?",
                     "What is your purpose?",
                     "Why are you here?",
-                    "Who are you?"
+                    "Who are you?",
                 ],
                 callback=self.purpose,
             )
@@ -132,9 +155,9 @@ class TweetyBot:
                     "Do you remember me?",
                     "Do you know me?",
                     "Do you know who I am?",
-                    "Who am I?"
+                    "Who am I?",
                 ],
-                callback=self.remember
+                callback=self.remember,
             )
         )
 
@@ -144,6 +167,7 @@ class TweetyBot:
                     "song name",
                     "What song was that?",
                     "What is that song called?",
+                    "What is it called?",
                 ],
                 callback=self.song_title,
             )
@@ -156,6 +180,7 @@ class TweetyBot:
                     "who sang",
                     "Who sings that song?",
                     "Who made that song?",
+                    "Who wrote that song?",
                 ],
                 callback=self.song_artist,
             )
@@ -168,6 +193,9 @@ class TweetyBot:
                     "when",
                     "song release date",
                     "When was that song made?",
+                    "When was that song written?",
+                    "When did it come out?",
+                    "When did that song come out?",
                 ],
                 callback=self.song_year,
             )
@@ -175,10 +203,23 @@ class TweetyBot:
 
         self.ch.add_command(
             Command(  # Genre of song
-                phrases=["song genre", "What genre is that song?"],
+                phrases=[
+                    "song genre",
+                    "What genre is that song?",
+                    "What kind of song is that?",
+                ],
                 callback=self.song_genre,
             )
         )
+
+        for question_type in SongInfo:
+            self.ch.add_command(
+                Command(
+                    phrases=[],
+                    callback=self.rhetorical,
+                    answer_type=question_type,
+                )
+            )
 
         self.ch.add_command(
             Command(phrases=["die"], callback=self.die, exact=True)  # Die
@@ -194,20 +235,18 @@ class TweetyBot:
                 assert message.sender is not None
 
                 if message.is_for_bot():
-                    command = self.ch.closest_command(threshold=0.2, min_diff=0.05)
+                    command = self.ch.closest_command(threshold=0.2, min_diff=0.005)
 
                     if command is not None:
                         print(
                             f"\n[Matched phrase: {command.get_last_matched_phrase()}]\n"
                         )
-                        response = command.run(self.ch.commands.remove, command)
+                        response = command.run(command)
                         assert isinstance(response, Message)
                         self.irc.send(response)
 
                     else:
-                        print(
-                            "\n[No matching command for message]\n"
-                        )
+                        print("\n[No matching command for message]\n")
                         response = Message(
                             target=message.sender,
                             content="i don't understand what you're saying... >.<",
@@ -226,16 +265,19 @@ class TweetyBot:
                             stanza, rhetorical_type if ask_rhetorical else None
                         )
 
-                        self.irc.send(Message(
-                            target=message.sender,
-                            content=f'"{stanza.stanza}"'
-                        ))
+                        self.irc.send(
+                            Message(target=message.sender, content=f'"{stanza.stanza}"')
+                        )
 
                         if ask_rhetorical:
-                            self.person(message.sender).remember_ask(stanza.title)
+                            self.person(message.sender).remember_ask(
+                                f'"{stanza.title}"'
+                            )
                             print(f"[Asking {message.sender} a rhetorical]\n")
 
-                            response = self.add_rhetorical(message.sender, rhetorical_type)
+                            response = self.add_rhetorical(
+                                message.sender, rhetorical_type
+                            )
                             self.irc.send(response)
 
         except KeyboardInterrupt:
@@ -253,56 +295,55 @@ class TweetyBot:
         stanza = self.mh.cur_stanza
         assert stanza is not None
 
-        qas: dict[SongInfo, tuple[str, str]] = {
-            SongInfo.SONG_TITLE: ("do you know the name of that song?", "TITLE"),
-            SongInfo.SONG_ARTIST: ("do you know who wrote that?", "ARTIST"),
-            SongInfo.SONG_YEAR: ("do you know what year that song was released?", "YEAR"),
-            SongInfo.SONG_GENRE: ("do you know the genre of that song?", "GENRE"),
+        questions = {
+            SongInfo.SONG_TITLE: "do you know the name of that song?",
+            SongInfo.SONG_ARTIST: "do you know who wrote that?",
+            SongInfo.SONG_YEAR: "do you know what year that song was released?",
+            SongInfo.SONG_GENRE: "do you know the genre of that song?",
         }
 
-        q, a = qas[rhetorical_type]
-
-        command = Command(
-            phrases=[a, f"is it {a}", f"was it {a}", f"in {a}", f"from {a}"],
-            callback=self.rhetorical,
-            run_once=True,
-        )
-
-        self.ch.add_rhetorical_command(command, rhetorical_type, sender)
-
-        return Message(
-            target=sender, content=q
-        )
+        question = questions[rhetorical_type]
+        self.ch.context.update_rhetorical(rhetorical_type, sender)
+        return Message(target=sender, content=question)
 
     ### COMMANDS ###
 
     def rhetorical(self, command: Command) -> Message:
         """Rhetorical command"""
+        answer_type = command.answer_type
+        assert answer_type is not None
         context = self.ch.context
         latest_message = context.latest_message
         assert latest_message is not None and latest_message.sender is not None
-        assert self.mh.cur_stanza is not None, "There should be a stanza... something is broken"
+        assert (
+            self.mh.cur_stanza is not None
+        ), "There should be a stanza... something is broken"
         assert latest_message.content is not None
-        assert context.cur_rhet is not None
-        answers = {
-            SongInfo.SONG_TITLE: self.mh.cur_stanza.title,
-            SongInfo.SONG_ARTIST: self.mh.cur_stanza.artist,
-            SongInfo.SONG_YEAR: self.mh.cur_stanza.year,
-            SongInfo.SONG_GENRE: self.mh.cur_stanza.genre,
+        cur_stanza = self.mh.cur_stanza
+        answers: dict[SongInfo, tuple[str, str]] = {
+            SongInfo.SONG_TITLE: (cur_stanza.title, f"'s called {cur_stanza.title}"),
+            SongInfo.SONG_ARTIST: (cur_stanza.artist, f"'s by {cur_stanza.artist}"),
+            SongInfo.SONG_YEAR: (
+                cur_stanza.year,
+                f" was released in {cur_stanza.year}",
+            ),
+            SongInfo.SONG_GENRE: (cur_stanza.genre, f"'s {cur_stanza.genre}"),
         }
-        actual = answers[context.cur_rhet]
-        guessed_correctly = helpers.simplify(actual) in helpers.simplify(latest_message.content)
+        actual, fill = answers[answer_type]
+        s_actual = helpers.simplify(actual)
+        s_latest_message = helpers.simplify(latest_message.content)
+        guessed_correctly = s_actual in s_latest_message
 
         correct_bank = [
-            f"yep! it's {actual}",
-            f"you got it! it's {actual}",
-            f"that's right! it's {actual}",
+            f"yep! it{fill}",
+            f"you got it! it{fill}",
+            f"that's right! it{fill}",
         ]
 
         incorrect_bank = [
-            f"nope, it's {actual}",
-            f"not quite, it's {actual}",
-            f"that's not it, it's {actual}",
+            f"nope, it{fill}",
+            f"not quite, it{fill}",
+            f"that's not it, it{fill}",
         ]
 
         bank = correct_bank if guessed_correctly else incorrect_bank
@@ -310,11 +351,28 @@ class TweetyBot:
 
         response = Message(target=latest_message.sender, content=choice)
 
-        if latest_message.sender != context.cur_rhet_target:
+        if command.already_ran:
             response.content = (
-                f"i didn't ask you... but {choice}. sorry "
-                + f"${context.cur_rhet_target}, the beans have been spilled"
+                "i already answered that haha but that's okay... " + choice
             )
+        elif context.cur_rhet is answer_type:
+            if latest_message.sender == context.cur_rhet_target:
+                feedback = (
+                    "ding-ding-ding!" if guessed_correctly else "wah wah waaah..."
+                )
+                response.content = f"{feedback} {choice}"
+                if guessed_correctly:
+                    self.person(latest_message.sender).remember_correct()
+                else:
+                    self.person(latest_message.sender).remember_incorrect()
+            else:
+                response.content = (
+                    f"i didn't ask you... but {choice} (sorry "
+                    + f"${context.cur_rhet_target}, the beans have been spilled)"
+                )
+            command.already_ran = True
+        else:
+            command.already_ran = True
 
         return response
 
@@ -418,7 +476,7 @@ class TweetyBot:
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
-            response.content = "i already said that haha but that's okay. " + choice
+            response.content = "i already said that haha but that's okay... " + choice
             self.person(latest_message.sender).remember_song(f'"{cur_stanza.title}"')
         else:
             command.already_ran = True
@@ -460,7 +518,7 @@ class TweetyBot:
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
-            response.content = "i already said that haha but that's okay. " + choice
+            response.content = "i already said that haha but that's okay... " + choice
             self.person(latest_message.sender).remember_song(f'"{cur_stanza.title}"')
         else:
             command.already_ran = True
@@ -502,7 +560,7 @@ class TweetyBot:
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
-            response.content = "i already said that haha but that's okay. " + choice
+            response.content = "i already said that haha but that's okay... " + choice
             self.person(latest_message.sender).remember_song(f'"{cur_stanza.title}"')
         else:
             command.already_ran = True
@@ -544,7 +602,7 @@ class TweetyBot:
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
-            response.content = "i already said that haha but that's okay. " + choice
+            response.content = "i already said that haha but that's okay... " + choice
             self.person(latest_message.sender).remember_song(f'"{cur_stanza.title}"')
         else:
             command.already_ran = True

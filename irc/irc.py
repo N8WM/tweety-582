@@ -1,5 +1,6 @@
 """Contains IRC class for the bot"""
 
+import random
 import re
 import socket
 import time
@@ -28,6 +29,7 @@ class IRC:
     def send(self, message: Message):
         """Send a message to the channel"""
         if self.open:
+            time.sleep(random.randint(1, 3))
             self.command(f"PRIVMSG {CHANNEL} :{message.assemble()}")
 
     def connect(self):

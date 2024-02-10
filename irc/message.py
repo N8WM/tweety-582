@@ -1,11 +1,13 @@
 """Contains message class for IRC messages"""
 
 import re
-from .constants import CHANNEL, NICKNAME
+
+from irc import constants as c
 
 
 class Message:
     """Message class for IRC messages"""
+
     def __init__(
         self,
         raw_message: str | None = None,
@@ -29,16 +31,15 @@ class Message:
         if self.raw_message is None:
             return False
         v_command = "PRIVMSG" in self.raw_message
-        v_channel = CHANNEL in self.raw_message
+        v_channel = c.CHANNEL in self.raw_message
         v_sender = self.sender is not None
         return v_command and v_channel and v_sender
-
 
     def is_for_bot(self) -> bool:
         """Check if the message is for the bot"""
         if self.raw_message is None:
             return False
-        v_target = self.target == NICKNAME
+        v_target = self.target == c.NICKNAME
         return self.is_priv() and v_target
 
     def parse(self) -> None:
@@ -51,8 +52,8 @@ class Message:
 
         sender_match = re.match(r"^:([A-Za-z0-9-_@&$()/]+)!.*$", self.raw_message)
         main_match = re.search(
-            rf".*PRIVMSG {CHANNEL} :(?:(?P<target>[^\s]+):\s*)?(?P<content>.*)\s*$",
-            self.raw_message
+            rf".*PRIVMSG {c.CHANNEL} :(?:(?P<target>[^\s]+):\s*)?(?P<content>.*)\s*$",
+            self.raw_message,
         )
 
         self.sender = sender_match.group(1) if sender_match else None

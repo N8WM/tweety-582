@@ -5,7 +5,7 @@ import re
 import socket
 import time
 
-from .constants import CHANNEL, NICKNAME, PORT, SERVER
+from irc import constants as c
 from .message import Message
 
 
@@ -17,8 +17,7 @@ class IRC:
     def __init__(self, channel: str | None = None):
         """Initialize the IRC socket"""
         if channel:
-            global CHANNEL
-            CHANNEL = channel
+            c.update_channel(channel)
         print("Initializing IRC socket...")
         self.irc = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.open = False
@@ -33,22 +32,22 @@ class IRC:
         """Send a message to the channel"""
         if self.open:
             time.sleep(random.randint(1, 3))
-            self.command(f"PRIVMSG {CHANNEL} :{message.assemble()}")
+            self.command(f"PRIVMSG {c.CHANNEL} :{message.assemble()}")
 
     def connect(self):
         """Connect to the server"""
-        print(f'Connecting to "{CHANNEL}" through "{SERVER}:{PORT}"...')
-        self.irc.connect((SERVER, PORT))
+        print(f'Connecting to "{c.CHANNEL}" through "{c.SERVER}:{c.PORT}"...')
+        self.irc.connect((c.SERVER, c.PORT))
         self.open = True
         print("Connected\n")
 
         # Perform user authentication
-        self.command("USER " + NICKNAME + " " + NICKNAME + " " + NICKNAME + " :python")
-        self.command("NICK " + NICKNAME)
+        self.command("USER " + c.NICKNAME + " " + c.NICKNAME + " " + c.NICKNAME + " :python")
+        self.command("NICK " + c.NICKNAME)
         time.sleep(5)
 
         # join the channel
-        self.command("JOIN " + CHANNEL)
+        self.command("JOIN " + c.CHANNEL)
 
     def disconnect(self):
         """Disconnect from the server"""

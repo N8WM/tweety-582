@@ -615,4 +615,8 @@ class TweetyBot:
         latest_message = self.ch.context.latest_message
         assert latest_message is not None
 
-        return Message(target=latest_message.sender, content="aww okay, goodbye... X.X")
+        return Message(
+            target=latest_message.sender,
+            content="aww okay, goodbye... X.X",
+            cb=self.irc.disconnect(),
+        )

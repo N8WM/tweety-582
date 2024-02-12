@@ -33,6 +33,9 @@ class IRC:
         if self.open:
             time.sleep(random.randint(1, 3))
             self.command(f"PRIVMSG {c.CHANNEL} :{message.assemble()}")
+            if message.cb:
+                time.sleep(1)
+                message.cb()
 
     def connect(self):
         """Connect to the server"""

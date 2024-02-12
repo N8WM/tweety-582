@@ -1,6 +1,7 @@
 """Contains message class for IRC messages"""
 
 import re
+from typing import Callable
 
 from irc import constants as c
 
@@ -13,12 +14,14 @@ class Message:
         raw_message: str | None = None,
         target: str | None = None,
         content: str | None = None,
+        cb: Callable | None = None,
     ) -> None:
         assert (
             raw_message is not None or content is not None
         ), "Message Error: either raw_message or content must be specified"
         self.error = None
         self.sender = None
+        self.cb = cb
         if raw_message:
             self.raw_message = raw_message
             self.parse()

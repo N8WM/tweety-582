@@ -3,6 +3,8 @@ IRC music-oriented chatbot for CSC-582
 
 ## Running the project
 
+*[Python 3.10+](https://www.python.org/downloads/release/python-3100/)* required
+
 **Note:**
 *As of 2/12, required file dependencies are automatically downloaded at runtime*
 

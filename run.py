@@ -3,6 +3,7 @@
 import argparse
 
 from bot.tweety import TweetyBot
+from music.setup import setup
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run the bot")
@@ -11,6 +12,8 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     channel = args.c
+
+    setup()
 
     tweety = TweetyBot(channel=channel)
     tweety.start()

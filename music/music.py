@@ -7,10 +7,9 @@ from enum import Enum
 
 import pandas as pd
 import torch.nn.functional as F
-from nltk.stem import PorterStemmer
-
 from bot.commands import embeddings as em
 from irc.message import Message
+from nltk.stem import PorterStemmer
 
 porter_stemmer = PorterStemmer()
 
@@ -58,8 +57,9 @@ class MusicHandler:
         if verse is None:
             return None
         shortened_verse = self.shorten_verse(phrase, verse["verse"])
+        if shortened_verse is None:
+            return None
 
-        assert shortened_verse is not None
         assert self.inverse_index is not None
         assert self.exploded_song_df is not None
 
@@ -72,7 +72,11 @@ class MusicHandler:
         assert isinstance(shortened_verse, str)
 
         similarity_score = self.get_similarity_score(phrase, shortened_verse)
-        if similarity_score > 0.2 and random.randint(0, 100) < percentile:
+        if (
+            similarity_score > 0.2
+            and random.randint(0, 100) < percentile
+            and len(shortened_verse) >= 15
+        ):
             self.cur_stanza = Stanza(
                 str(verse["title"]),
                 str(verse["artist"]),
@@ -83,6 +87,8 @@ class MusicHandler:
         else:
             return None
 
+        if len(self.cur_stanza.stanza) < 15:
+            return None
         return self.cur_stanza
 
     def read_files(self):

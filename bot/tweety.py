@@ -417,8 +417,9 @@ class TweetyBot:
             + "you a question about it. but if you want to know anything, you can ask "
             + 'me question about the song i sang like "what is that song called?" '
             + '"who wrote that song?", "what genre is that song?", and "when was that '
-            + "song released?\". i'll understand you if you're direct otherwise i "
-            + "might not understand... *-*"
+            + 'song released?". If you think you know one of these, you can tell me '
+            + "and i'll let you know if you're right! i'll understand you if you're "
+            + "direct otherwise i might not understand... *-*"
         )
 
         self.person(latest_message.sender).remember_purpose()
@@ -472,7 +473,7 @@ class TweetyBot:
                 response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"that's what i asked {latest_message.sender}, "
+                    f"that's what i asked {context.cur_rhet_target}, "
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
@@ -514,7 +515,7 @@ class TweetyBot:
                 response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"that's what i asked {latest_message.sender}, "
+                    f"that's what i asked {context.cur_rhet_target}, "
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
@@ -556,7 +557,7 @@ class TweetyBot:
                 response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"that's what i asked {latest_message.sender}, "
+                    f"that's what i asked {context.cur_rhet_target}, "
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
@@ -598,7 +599,7 @@ class TweetyBot:
                 response.content = "take a guess, that's what i asked you hehe >.<"
             else:
                 response.content = (
-                    f"that's what i asked {latest_message.sender}, "
+                    f"that's what i asked {context.cur_rhet_target}, "
                     + "i wanna see if they know :3c"
                 )
         elif command.already_ran:
